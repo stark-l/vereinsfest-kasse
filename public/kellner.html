@@ -38,14 +38,6 @@
             <div class="total" id="current-total">Gesamt: 0.00 €</div>
             <button id="submit-order">Bestellung abschicken</button>
         </div>
-        
-        <!-- Debug-Informationen -->
-        <div id="debug-info" style="margin-top: 20px; padding: 10px; background-color: #f0f0f0; border-radius: 5px; font-size: 12px;">
-            <h3>Debug-Informationen:</h3>
-            <div id="connection-status">Verbindung: Wird geprüft...</div>
-            <div id="menu-status">Menü: Wird geladen...</div>
-            <div id="socket-status">Socket.IO: Wird verbunden...</div>
-        </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
@@ -66,30 +58,6 @@
             const waiterNameDisplay = document.getElementById('waiter-name-display');
             const setWaiterNameButton = document.getElementById('set-waiter-name');
 
-            // Debug-Elemente
-            const connectionStatus = document.getElementById('connection-status');
-            const menuStatus = document.getElementById('menu-status');
-            const socketStatus = document.getElementById('socket-status');
-
-            // Socket.IO Verbindungsstatus
-            socket.on('connect', () => {
-                console.log('✅ Socket.IO verbunden:', socket.id);
-                socketStatus.textContent = `Socket.IO: Verbunden (${socket.id})`;
-                socketStatus.style.color = 'green';
-            });
-
-            socket.on('disconnect', () => {
-                console.log('❌ Socket.IO getrennt');
-                socketStatus.textContent = 'Socket.IO: Getrennt';
-                socketStatus.style.color = 'red';
-            });
-
-            socket.on('connect_error', (error) => {
-                console.error('❌ Socket.IO Verbindungsfehler:', error);
-                socketStatus.textContent = `Socket.IO: Fehler - ${error.message}`;
-                socketStatus.style.color = 'red';
-            });
-
             // Kellner Name setzen
             setWaiterNameButton.addEventListener('click', () => {
                 const name = waiterNameInput.value.trim();
@@ -103,25 +71,10 @@
                 }
             });
 
-            // Menü laden
             fetch('/api/menu')
-                .then(response => {
-                    console.log('📋 Menü-Response:', response.status);
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}`);
-                    }
-                    return response.json();
-                })
+                .then(response => response.json())
                 .then(menu => {
-                    console.log('✅ Menü geladen:', menu);
-                    menuStatus.textContent = 'Menü: Geladen';
-                    menuStatus.style.color = 'green';
                     displayMenu(menu);
-                })
-                .catch(error => {
-                    console.error('❌ Menü-Fehler:', error);
-                    menuStatus.textContent = `Menü: Fehler - ${error.message}`;
-                    menuStatus.style.color = 'red';
                 });
 
             function displayMenu(menu) {
@@ -207,14 +160,6 @@
                 const total = currentOrder.reduce((sum, item) => sum + item.price, 0);
                 const timestamp = new Date().toLocaleString('de-DE');
 
-                console.log('📤 Bestellung senden:', {
-                    table: tableNumber,
-                    items: currentOrder,
-                    total: total,
-                    waiter: waiterName,
-                    timestamp: timestamp
-                });
-
                 socket.emit('placeOrder', {
                     table: tableNumber,
                     items: currentOrder,
@@ -227,18 +172,6 @@
                 currentOrder = [];
                 tableNumberInput.value = '';
                 updateOrderDisplay();
-            });
-
-            // Initiale Bestellungen laden
-            socket.on('initialOrders', (orders) => {
-                console.log('📥 Initiale Bestellungen:', orders);
-                connectionStatus.textContent = `Verbindung: ${orders.length} Bestellungen geladen`;
-                connectionStatus.style.color = 'green';
-            });
-
-            // Neue Bestellungen empfangen
-            socket.on('newOrder', (order) => {
-                console.log('📥 Neue Bestellung empfangen:', order);
             });
         });
     </script>

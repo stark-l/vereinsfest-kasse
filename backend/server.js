@@ -23,16 +23,47 @@ const io = new Server(server, {
 const PORT = process.env.PORT || 3000;
 
 // PostgreSQL Verbindung (Railway stellt DATABASE_URL bereit)
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
+let pool = null;
+let useDatabase = false;
+
+// Verbesserte Datenbankverbindung für Railway
+function initializeDatabaseConnection() {
+    if (process.env.DATABASE_URL) {
+        try {
+            pool = new Pool({
+                connectionString: process.env.DATABASE_URL,
+                // Railway PostgreSQL erfordert SSL in Produktion
+                ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+                // Optimierte Einstellungen für Railway
+                max: 10,
+                idleTimeoutMillis: 30000,
+                connectionTimeoutMillis: 5000,
+            });
+            
+            console.log('🔗 Versuche PostgreSQL Verbindung...');
+            useDatabase = true;
+        } catch (error) {
+            console.log('❌ PostgreSQL Konfigurationsfehler:', error.message);
+            console.log('⚠️ Verwende In-Memory Storage');
+            useDatabase = false;
+        }
+    } else {
+        console.log('ℹ️ Keine DATABASE_URL gefunden - verwende In-Memory Storage');
+        console.log('💡 Für lokale Entwicklung: Erstelle eine .env Datei mit DATABASE_URL');
+        useDatabase = false;
+    }
+}
 
 // 3. Statische Dateien bereitstellen (HTML, CSS, Logo aus dem public Ordner)
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // 4. Datenbank initialisieren
 async function initializeDatabase() {
+    if (!useDatabase || !pool) {
+        console.log('ℹ️ Überspringe Datenbankinitialisierung - verwende In-Memory Storage');
+        return;
+    }
+    
     try {
         // Tabelle für Bestellungen erstellen
         await pool.query(`
@@ -61,6 +92,7 @@ async function initializeDatabase() {
         console.log('✅ Datenbank erfolgreich initialisiert');
     } catch (error) {
         console.error('❌ Datenbankfehler:', error);
+        useDatabase = false; // Fallback zu In-Memory
     }
 }
 
@@ -108,18 +140,19 @@ app.get('/health', (req, res) => {
     res.json({ 
         status: 'OK', 
         timestamp: new Date().toISOString(),
-        database: process.env.DATABASE_URL ? 'Connected' : 'In-Memory'
+        database: useDatabase ? 'Connected' : 'In-Memory',
+        orders: activeOrders.length
     });
 });
 
 // Bestellungen aus Datenbank laden
 async function loadOrdersFromDatabase() {
-    try {
-        if (!process.env.DATABASE_URL) {
-            console.log('⚠️ Keine Datenbank verbunden - verwende In-Memory Storage');
-            return;
-        }
+    if (!useDatabase || !pool) {
+        console.log('ℹ️ Verwende In-Memory Storage für Bestellungen');
+        return;
+    }
 
+    try {
         const result = await pool.query(`
             SELECT o.*, 
                    json_agg(json_build_object('name', oi.item_name, 'price', oi.item_price, 'quantity', oi.quantity)) as items
@@ -144,6 +177,8 @@ async function loadOrdersFromDatabase() {
         console.log(`📊 ${activeOrders.length} aktive Bestellungen aus Datenbank geladen`);
     } catch (error) {
         console.error('❌ Fehler beim Laden der Bestellungen:', error);
+        console.log('⚠️ Fallback zu In-Memory Storage');
+        useDatabase = false;
     }
 }
 
@@ -156,7 +191,7 @@ io.on('connection', (socket) => {
         console.log('Neue Bestellung erhalten:', orderData);
         
         try {
-            if (process.env.DATABASE_URL) {
+            if (useDatabase && pool) {
                 // In Datenbank speichern
                 const orderResult = await pool.query(`
                     INSERT INTO orders (table_number, waiter_name, total, timestamp, status)
@@ -205,12 +240,17 @@ io.on('connection', (socket) => {
             io.emit('newOrder', newOrder);
         } catch (error) {
             console.error('❌ Fehler beim Speichern der Bestellung:', error);
+            // Fallback zu In-Memory wenn Datenbankfehler
+            if (useDatabase) {
+                console.log('⚠️ Fallback zu In-Memory Storage');
+                useDatabase = false;
+            }
         }
     });
     
     socket.on('updateOrderStatus', async ({ orderId, newStatus }) => {
         try {
-            if (process.env.DATABASE_URL) {
+            if (useDatabase && pool) {
                 // In Datenbank aktualisieren
                 await pool.query(`
                     UPDATE orders SET status = $1 WHERE id = $2
@@ -225,6 +265,11 @@ io.on('connection', (socket) => {
             }
         } catch (error) {
             console.error('❌ Fehler beim Aktualisieren des Status:', error);
+            // Fallback zu In-Memory wenn Datenbankfehler
+            if (useDatabase) {
+                console.log('⚠️ Fallback zu In-Memory Storage');
+                useDatabase = false;
+            }
         }
     });
 
@@ -235,7 +280,8 @@ io.on('connection', (socket) => {
 
 // 5. Server starten
 async function startServer() {
-    await initializeDatabase();
+    initializeDatabaseConnection(); // Initialisiere die Datenbankverbindung
+    await initializeDatabase(); // Initialisiere die Datenbankstruktur
     await loadOrdersFromDatabase();
     
     server.listen(PORT, () => {
@@ -243,7 +289,8 @@ async function startServer() {
         console.log(`Kellner-App: http://localhost:${PORT}/kellner.html`);
         console.log(`Küchen-Display: http://localhost:${PORT}/kueche.html`);
         console.log(`Health Check: http://localhost:${PORT}/health`);
-        console.log(`Datenbank: ${process.env.DATABASE_URL ? '✅ Verbunden' : '⚠️ In-Memory'}`);
+        console.log(`Datenbank: ${useDatabase ? '✅ PostgreSQL' : '⚠️ In-Memory'}`);
+        console.log(`Umgebung: ${process.env.NODE_ENV || 'development'}`);
     });
 }
 

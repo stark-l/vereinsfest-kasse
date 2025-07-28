@@ -44,7 +44,12 @@ npm start
 
 1. Railway Account erstellen: https://railway.app
 2. GitHub Repository verbinden
-3. Automatisches Deployment
+3. PostgreSQL Database hinzufügen:
+   - In Railway Dashboard: "New Service" → "Database" → "PostgreSQL"
+   - Railway setzt automatisch `DATABASE_URL` Umgebungsvariable
+4. Automatisches Deployment starten
+
+**Wichtig**: Railway stellt automatisch die `DATABASE_URL` Umgebungsvariable bereit, wenn eine PostgreSQL Database hinzugefügt wird.
 
 ## 🎯 Verwendung
 
@@ -70,6 +75,14 @@ npm start
 ## 🔧 Umgebungsvariablen
 
 - `PORT` - Server Port (Standard: 3000)
+- `DATABASE_URL` - PostgreSQL Verbindungsstring (wird von Railway automatisch gesetzt)
+- `NODE_ENV` - Umgebung (development/production)
+
+### Lokale Entwicklung
+Für lokale Tests ohne Datenbank funktioniert das System mit In-Memory Storage.
+Für lokale Datenbankverbindung:
+1. `env.example` zu `.env` kopieren
+2. `DATABASE_URL` mit lokaler PostgreSQL Verbindung setzen
 
 ## 📝 Lizenz
 
