@@ -1,0 +1,23 @@
+{
+  "name": "vereinsfest-kasse",
+  "version": "1.0.0",
+  "description": "SCU Vereinsfest Bestellsystem",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "nodemon backend/server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": ["vereinsfest", "bestellsystem", "kasse"],
+  "author": "SCU",
+  "license": "MIT"
+} 

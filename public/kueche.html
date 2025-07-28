@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCU Küchen-Display</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="logo.png" alt="SCU Logo">
+            <h1>Küchen- & Ausschank-Display</h1>
+            <button id="stats-button" class="stats-button">📊 Statistiken</button>
+        </div>
+        
+        <!-- Statistik Modal -->
+        <div id="stats-modal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>Bestellstatistiken</h2>
+                <div id="stats-content">
+                    <!-- Statistiken werden hier dynamisch eingefügt -->
+                </div>
+            </div>
+        </div>
+        
+        <div id="order-list">
+            <!-- Bestellungen werden hier dynamisch angezeigt -->
+        </div>
+        
+        <!-- Einklappbare fertige Bestellungen -->
+        <div id="finished-orders-section" style="display: none;">
+            <div class="finished-orders-header" onclick="toggleFinishedOrders()">
+                <h3>✅ Fertige Bestellungen (<span id="finished-count">0</span>)</h3>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div id="finished-orders-list" class="finished-orders-list">
+                <!-- Fertige Bestellungen werden hier angezeigt -->
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const socket = io();
+            const orderList = document.getElementById('order-list');
+            const finishedOrdersSection = document.getElementById('finished-orders-section');
+            const finishedOrdersList = document.getElementById('finished-orders-list');
+            const finishedCount = document.getElementById('finished-count');
+            const statsButton = document.getElementById('stats-button');
+            const statsModal = document.getElementById('stats-modal');
+            const closeModal = document.querySelector('.close');
+            const statsContent = document.getElementById('stats-content');
+
+            let allOrders = []; // Alle Bestellungen für Statistiken
+
+            socket.on('newOrder', (order) => {
+                allOrders.push(order);
+                addOrderToDisplay(order);
+                updateFinishedOrders();
+            });
+            
+            socket.on('initialOrders', (orders) => {
+                allOrders = orders;
+                orderList.innerHTML = '';
+                finishedOrdersList.innerHTML = '';
+                
+                orders.forEach(order => {
+                    if (order.status === 'Fertig') {
+                        addOrderToFinishedDisplay(order);
+                    } else {
+                        addOrderToDisplay(order);
+                    }
+                });
+                updateFinishedOrders();
+            });
+            
+            socket.on('orderStatusChanged', ({ orderId, newStatus }) => {
+                const order = allOrders.find(o => o.id === orderId);
+                if (order) {
+                    order.status = newStatus;
+                    
+                    if (newStatus === 'Fertig') {
+                        // Bestellung in fertige Liste verschieben
+                        const orderCard = document.getElementById(`order-${orderId}`);
+                        if (orderCard) {
+                            orderCard.remove();
+                            addOrderToFinishedDisplay(order);
+                        }
+                    } else {
+                        // Bestellung zurück in aktive Liste
+                        const finishedCard = document.getElementById(`finished-order-${orderId}`);
+                        if (finishedCard) {
+                            finishedCard.remove();
+                            addOrderToDisplay(order);
+                        }
+                    }
+                    updateFinishedOrders();
+                }
+            });
+
+            function addOrderToDisplay(order) {
+                const card = document.createElement('div');
+                card.className = `order-card status-${order.status.replace(' ', '-')}`;
+                card.id = `order-${order.id}`;
+
+                const itemCounts = {};
+                order.items.forEach(item => {
+                    itemCounts[item.name] = (itemCounts[item.name] || 0) + 1;
+                });
+
+                let itemsHtml = '<ul>';
+                for(const name in itemCounts) {
+                    itemsHtml += `<li><strong>${itemCounts[name]}x</strong> ${name}</li>`;
+                }
+                itemsHtml += '</ul>';
+
+                // Kellner und Zeitstempel anzeigen
+                const waiterInfo = order.waiter ? `<p class="waiter-info">Kellner: ${order.waiter}</p>` : '';
+                const timestampInfo = order.timestamp ? `<p class="timestamp-info">Zeit: ${order.timestamp}</p>` : '';
+
+                card.innerHTML = `
+                    <h3>Bestellung #${order.id} (Tisch: ${order.table})</h3>
+                    <p class="status">Status: ${order.status}</p>
+                    ${waiterInfo}
+                    ${timestampInfo}
+                    ${itemsHtml}
+                    <div class="actions">
+                        <button class="in-arbeit" data-id="${order.id}">In Arbeit</button>
+                        <button class="fertig" data-id="${order.id}">Fertig</button>
+                    </div>
+                `;
+                orderList.prepend(card);
+            }
+
+            function addOrderToFinishedDisplay(order) {
+                const card = document.createElement('div');
+                card.className = `order-card status-${order.status.replace(' ', '-')} finished-order`;
+                card.id = `finished-order-${order.id}`;
+
+                const itemCounts = {};
+                order.items.forEach(item => {
+                    itemCounts[item.name] = (itemCounts[item.name] || 0) + 1;
+                });
+
+                let itemsHtml = '<ul>';
+                for(const name in itemCounts) {
+                    itemsHtml += `<li><strong>${itemCounts[name]}x</strong> ${name}</li>`;
+                }
+                itemsHtml += '</ul>';
+
+                const waiterInfo = order.waiter ? `<p class="waiter-info">Kellner: ${order.waiter}</p>` : '';
+                const timestampInfo = order.timestamp ? `<p class="timestamp-info">Zeit: ${order.timestamp}</p>` : '';
+
+                card.innerHTML = `
+                    <h3>Bestellung #${order.id} (Tisch: ${order.table})</h3>
+                    <p class="status">Status: ${order.status}</p>
+                    ${waiterInfo}
+                    ${timestampInfo}
+                    ${itemsHtml}
+                    <div class="actions">
+                        <button class="in-arbeit" data-id="${order.id}">Zurück zu "In Arbeit"</button>
+                    </div>
+                `;
+                finishedOrdersList.appendChild(card);
+            }
+
+            function updateFinishedOrders() {
+                const finishedOrders = allOrders.filter(order => order.status === 'Fertig');
+                finishedCount.textContent = finishedOrders.length;
+                
+                if (finishedOrders.length > 0) {
+                    finishedOrdersSection.style.display = 'block';
+                } else {
+                    finishedOrdersSection.style.display = 'none';
+                }
+            }
+
+            function toggleFinishedOrders() {
+                const finishedList = document.getElementById('finished-orders-list');
+                const toggleIcon = document.querySelector('.toggle-icon');
+                
+                if (finishedList.style.display === 'none') {
+                    finishedList.style.display = 'block';
+                    toggleIcon.textContent = '▼';
+                } else {
+                    finishedList.style.display = 'none';
+                    toggleIcon.textContent = '▶';
+                }
+            }
+
+            // Globale Funktion für Toggle
+            window.toggleFinishedOrders = toggleFinishedOrders;
+
+            function showConfirmationDialog(message, callback) {
+                if (confirm(message)) {
+                    callback();
+                }
+            }
+
+            function generateStatistics() {
+                const stats = {
+                    totalOrders: allOrders.length,
+                    totalItems: 0,
+                    categories: {},
+                    items: {}
+                };
+
+                allOrders.forEach(order => {
+                    order.items.forEach(item => {
+                        stats.totalItems++;
+                        
+                        // Kategorie-basierte Statistiken
+                        const category = getItemCategory(item.name);
+                        if (!stats.categories[category]) {
+                            stats.categories[category] = 0;
+                        }
+                        stats.categories[category]++;
+
+                        // Item-basierte Statistiken
+                        if (!stats.items[item.name]) {
+                            stats.items[item.name] = 0;
+                        }
+                        stats.items[item.name]++;
+                    });
+                });
+
+                return stats;
+            }
+
+            function getItemCategory(itemName) {
+                if (itemName.includes('Hähnchen') || itemName.includes('Schaschlik') || 
+                    itemName.includes('Gyros') || itemName.includes('Steak') || 
+                    itemName.includes('Grillwurst') || itemName.includes('Schweinebraten') ||
+                    itemName.includes('Schweineschnitzel')) {
+                    return 'Hauptgerichte';
+                } else if (itemName.includes('Pommes') || itemName.includes('Kartoffelsalat') ||
+                           itemName.includes('Spätzle') || itemName.includes('Gemüse')) {
+                    return 'Beilagen';
+                } else if (itemName.includes('Käse') || itemName.includes('Semmel')) {
+                    return 'Snacks';
+                } else {
+                    return 'Sonstiges';
+                }
+            }
+
+            function displayStatistics() {
+                const stats = generateStatistics();
+                
+                let statsHtml = `
+                    <div class="stats-summary">
+                        <h3>Gesamtübersicht</h3>
+                        <p><strong>Bestellungen:</strong> ${stats.totalOrders}</p>
+                        <p><strong>Artikel:</strong> ${stats.totalItems}</p>
+                    </div>
+                    
+                    <div class="stats-categories">
+                        <h3>Nach Kategorien</h3>
+                `;
+
+                for (const category in stats.categories) {
+                    statsHtml += `<p><strong>${category}:</strong> ${stats.categories[category]}x</p>`;
+                }
+
+                statsHtml += `
+                    </div>
+                    
+                    <div class="stats-items">
+                        <h3>Nach Artikeln</h3>
+                `;
+
+                // Sortiere nach Häufigkeit
+                const sortedItems = Object.entries(stats.items).sort((a, b) => b[1] - a[1]);
+                sortedItems.forEach(([item, count]) => {
+                    statsHtml += `<p><strong>${item}:</strong> ${count}x</p>`;
+                });
+
+                statsHtml += '</div>';
+                
+                statsContent.innerHTML = statsHtml;
+            }
+            
+            orderList.addEventListener('click', (event) => {
+                if (event.target.tagName === 'BUTTON') {
+                    const orderId = parseInt(event.target.getAttribute('data-id'));
+                    let newStatus = '';
+                    
+                    if (event.target.classList.contains('in-arbeit')) {
+                        newStatus = 'In Arbeit';
+                    } else if (event.target.classList.contains('fertig')) {
+                        newStatus = 'Fertig';
+                    }
+                    
+                    if (newStatus) {
+                        // Prüfe ob es eine Bestätigung benötigt
+                        const currentOrder = allOrders.find(o => o.id === orderId);
+                        if (currentOrder && currentOrder.status === 'Fertig' && newStatus === 'In Arbeit') {
+                            showConfirmationDialog(
+                                `Möchten Sie Bestellung #${orderId} wirklich zurück zu "In Arbeit" setzen?`,
+                                () => socket.emit('updateOrderStatus', { orderId, newStatus })
+                            );
+                        } else {
+                            socket.emit('updateOrderStatus', { orderId, newStatus });
+                        }
+                    }
+                }
+            });
+
+            // Event Listener für fertige Bestellungen
+            finishedOrdersList.addEventListener('click', (event) => {
+                if (event.target.tagName === 'BUTTON') {
+                    const orderId = parseInt(event.target.getAttribute('data-id'));
+                    if (event.target.classList.contains('in-arbeit')) {
+                        showConfirmationDialog(
+                            `Möchten Sie Bestellung #${orderId} wirklich zurück zu "In Arbeit" setzen?`,
+                            () => socket.emit('updateOrderStatus', { orderId, newStatus: 'In Arbeit' })
+                        );
+                    }
+                }
+            });
+
+            // Statistik Modal
+            statsButton.addEventListener('click', () => {
+                displayStatistics();
+                statsModal.style.display = 'block';
+            });
+
+            closeModal.addEventListener('click', () => {
+                statsModal.style.display = 'none';
+            });
+
+            window.addEventListener('click', (event) => {
+                if (event.target === statsModal) {
+                    statsModal.style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

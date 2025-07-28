@@ -1,0 +1,364 @@
+/* style.css - SCU Vereinsdesign v2 (Klarer & strukturierter) */
+:root {
+    --primary-color: #00732F; /* Euer Vereinsgrün */
+    --primary-color-dark: #005a25;
+    --text-color: #333;
+    --background-color: #f8f9fa;
+    --card-background: #ffffff;
+    --border-color: #dee2e6;
+    
+    /* NEU: Farben für die Menü-Buttons */
+    --button-bg: #f1f3f5; /* Helles, neutrales Grau */
+    --button-text-color: #343a40; /* Dunkler Text für Lesbarkeit */
+    --button-border: #ced4da;
+    
+    /* Statusfarben bleiben gleich */
+    --status-neu: #ffc107;
+    --status-in-arbeit: #17a2b8;
+    --status-fertig: #28a745;
+}
+
+body { 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+    background-color: var(--background-color); 
+    color: var(--text-color); 
+    margin: 0; 
+    padding: 15px;
+}
+
+.container { 
+    max-width: 1200px; /* Etwas breiter für die Gitter-Ansicht */
+    margin: auto; 
+    background: var(--card-background); 
+    padding: 20px; 
+    border-radius: 8px; 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08); 
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+
+.header img {
+    height: 60px;
+}
+
+.header h1 {
+    flex-grow: 1;
+}
+
+/* Statistik Button */
+.stats-button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.stats-button:hover {
+    background-color: var(--primary-color-dark);
+}
+
+h1, h2 { 
+    color: var(--primary-color);
+    margin: 0;
+}
+
+h2 {
+    margin-top: 25px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 8px;
+    font-size: 1.8em;
+}
+
+/* Kellner Sektion */
+.waiter-section {
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.waiter-section h2 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.waiter-section input {
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 16px;
+    margin-right: 10px;
+    width: 200px;
+}
+
+.waiter-section button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.waiter-section button:hover {
+    background-color: var(--primary-color-dark);
+}
+
+/* --- ÄNDERUNG: KLARE STRUKTUR FÜR MENÜ-BUTTONS --- */
+.menu-items {
+    display: grid; /* Wir verwenden jetzt CSS Grid statt Flexbox */
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Responsive Spalten */
+    gap: 12px; /* Abstand zwischen den Buttons */
+    margin-top: 15px;
+}
+
+/* --- ÄNDERUNG: REDUZIERTES FARBDESIGN FÜR BUTTONS --- */
+.menu-item { 
+    background-color: var(--button-bg); /* Neutraler Hintergrund */
+    color: var(--button-text-color); /* Dunkler Text */
+    border: 1px solid var(--button-border); /* Subtile Umrandung */
+    padding: 12px 18px; 
+    border-radius: 5px; 
+    cursor: pointer; 
+    font-size: 16px;
+    text-align: left; /* Text linksbündig für bessere Lesbarkeit */
+    transition: all 0.2s ease-in-out;
+}
+
+/* Das Grün erscheint jetzt nur noch beim Darüberfahren (Hover) */
+.menu-item:hover { 
+    background-color: var(--primary-color); 
+    color: white;
+    border-color: var(--primary-color-dark);
+    transform: translateY(-2px); /* Leichter Schwebe-Effekt */
+}
+
+/* Der "Abschicken"-Button bleibt prominent grün */
+#submit-order { 
+    background-color: var(--status-fertig); 
+    font-weight: bold;
+    font-size: 1.1em;
+    padding: 15px 25px;
+}
+#submit-order:hover {
+    background-color: #218838;
+}
+
+/* Styles für die Bestellungsübersicht etc. bleiben gleich */
+.current-order, .order-list { 
+    margin-top: 30px; 
+}
+.total { font-size: 1.3em; font-weight: bold; margin-top: 15px; color: #333; }
+
+/* Bestellungsliste mit Entfernen-Buttons */
+#current-order-items li { 
+    margin-bottom: 8px; 
+    list-style-type: none; 
+    padding: 8px 12px; 
+    background-color: #f8f9fa; 
+    border-radius: 4px; 
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.remove-item {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 10px;
+}
+
+.remove-item:hover {
+    background-color: #c82333;
+}
+
+/* Styles für das Küchen-Display (unverändert) */
+.order-card { 
+    border: 1px solid var(--border-color); 
+    padding: 15px; 
+    margin-bottom: 15px; 
+    border-radius: 8px; 
+    background: var(--card-background);
+    transition: all 0.3s;
+}
+.order-card.status-Neu { border-left: 5px solid var(--status-neu); }
+.order-card.status-In-Arbeit { border-left: 5px solid var(--status-in-arbeit); }
+.order-card.status-Fertig { border-left: 5px solid var(--status-fertig); background-color: #f0fff0; }
+.actions button { color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; margin: 5px 5px 5px 0; font-size: 14px; }
+.actions button.in-arbeit { background-color: var(--status-in-arbeit); }
+.actions button.fertig { background-color: var(--status-fertig); }
+
+/* Zusätzliche Styles für Küchen-Display */
+.waiter-info {
+    color: var(--primary-color);
+    font-weight: bold;
+    margin: 5px 0;
+    font-size: 14px;
+}
+
+.timestamp-info {
+    color: #666;
+    font-size: 12px;
+    margin: 5px 0;
+    font-style: italic;
+}
+
+/* Fertige Bestellungen Sektion */
+#finished-orders-section {
+    margin-top: 30px;
+    border-top: 2px solid var(--border-color);
+    padding-top: 20px;
+}
+
+.finished-orders-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #e8f5e8;
+    padding: 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid var(--status-fertig);
+    transition: background-color 0.2s;
+}
+
+.finished-orders-header:hover {
+    background-color: #d4edda;
+}
+
+.finished-orders-header h3 {
+    margin: 0;
+    color: var(--status-fertig);
+    font-size: 1.4em;
+}
+
+.toggle-icon {
+    font-size: 18px;
+    color: var(--status-fertig);
+    font-weight: bold;
+}
+
+.finished-orders-list {
+    margin-top: 15px;
+}
+
+.finished-order {
+    opacity: 0.8;
+    background-color: #f8fff8;
+}
+
+.finished-order:hover {
+    opacity: 1;
+}
+
+/* Statistik Modal */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: var(--card-background);
+    margin: 5% auto;
+    padding: 30px;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 800px;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.close {
+    position: absolute;
+    right: 20px;
+    top: 15px;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    color: #aaa;
+}
+
+.close:hover {
+    color: var(--text-color);
+}
+
+.modal-content h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: 10px;
+}
+
+/* Statistik Styles */
+.stats-summary, .stats-categories, .stats-items {
+    margin-bottom: 30px;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid var(--primary-color);
+}
+
+.stats-summary h3, .stats-categories h3, .stats-items h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: var(--primary-color);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 8px;
+}
+
+.stats-summary p, .stats-categories p, .stats-items p {
+    margin: 8px 0;
+    font-size: 16px;
+}
+
+.stats-summary strong, .stats-categories strong, .stats-items strong {
+    color: var(--primary-color);
+    min-width: 120px;
+    display: inline-block;
+}
+
+/* Responsive Design für Modal */
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        margin: 10% auto;
+        padding: 20px;
+    }
+    
+    .stats-summary strong, .stats-categories strong, .stats-items strong {
+        min-width: 80px;
+    }
+}

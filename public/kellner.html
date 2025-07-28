@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCU Bestellsystem</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="logo.png" alt="SCU Logo">
+            <h1>SCU Bestellsystem</h1>
+        </div>
+        
+        <div id="waiter-input" class="waiter-section">
+            <h2>Kellner Name:</h2>
+            <input type="text" id="waiter-name" placeholder="Ihr Name" maxlength="50">
+            <button id="set-waiter-name">Bestätigen</button>
+        </div>
+        
+        <div id="waiter-display" class="waiter-section" style="display: none;">
+            <h2>Kellner: <span id="waiter-name-display"></span></h2>
+        </div>
+        
+        <div class="table-selection">
+            <h2>Tischnummer:</h2>
+            <input type="number" id="table-number" placeholder="z.B. 15" min="1">
+        </div>
+        
+        <div id="menu-container">
+            <!-- Menü wird hier dynamisch eingefügt -->
+        </div>
+        
+        <div class="current-order">
+            <h2>Aktuelle Bestellung</h2>
+            <ul id="current-order-items"></ul>
+            <div class="total" id="current-total">Gesamt: 0.00 €</div>
+            <button id="submit-order">Bestellung abschicken</button>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const socket = io();
+            let currentOrder = [];
+            let waiterName = '';
+
+            const menuContainer = document.getElementById('menu-container');
+            const orderItemsList = document.getElementById('current-order-items');
+            const totalDisplay = document.getElementById('current-total');
+            const submitButton = document.getElementById('submit-order');
+            const tableNumberInput = document.getElementById('table-number');
+            const waiterInputSection = document.getElementById('waiter-input');
+            const waiterDisplaySection = document.getElementById('waiter-display');
+            const waiterNameInput = document.getElementById('waiter-name');
+            const waiterNameDisplay = document.getElementById('waiter-name-display');
+            const setWaiterNameButton = document.getElementById('set-waiter-name');
+
+            // Kellner Name setzen
+            setWaiterNameButton.addEventListener('click', () => {
+                const name = waiterNameInput.value.trim();
+                if (name) {
+                    waiterName = name;
+                    waiterNameDisplay.textContent = name;
+                    waiterInputSection.style.display = 'none';
+                    waiterDisplaySection.style.display = 'block';
+                } else {
+                    alert('Bitte geben Sie Ihren Namen ein!');
+                }
+            });
+
+            fetch('/api/menu')
+                .then(response => response.json())
+                .then(menu => {
+                    displayMenu(menu);
+                });
+
+            function displayMenu(menu) {
+                menuContainer.innerHTML = ''; // Container leeren
+                for (const category in menu) {
+                    const categoryDiv = document.createElement('div');
+                    categoryDiv.className = 'menu-category';
+                    const categoryTitle = category === 'sonntagsgerichte' ? 'Nur Sonntag' : 'Speisen';
+                    categoryDiv.innerHTML = `<h2>${categoryTitle}</h2>`;
+                    
+                    const itemsDiv = document.createElement('div');
+                    itemsDiv.className = 'menu-items';
+
+                    menu[category].forEach(item => {
+                        const button = document.createElement('button');
+                        button.className = 'menu-item';
+                        button.textContent = `${item.name} (${item.price.toFixed(2)} €)`;
+                        button.onclick = () => addToOrder(item);
+                        itemsDiv.appendChild(button);
+                    });
+                    categoryDiv.appendChild(itemsDiv);
+                    menuContainer.appendChild(categoryDiv);
+                }
+            }
+
+            function addToOrder(item) {
+                currentOrder.push(item);
+                updateOrderDisplay();
+            }
+
+            function removeFromOrder(itemId) {
+                const index = currentOrder.findIndex(item => item.id === itemId);
+                if (index > -1) {
+                    currentOrder.splice(index, 1);
+                    updateOrderDisplay();
+                }
+            }
+
+            function updateOrderDisplay() {
+                orderItemsList.innerHTML = '';
+                let total = 0;
+                
+                const itemCounts = {};
+                currentOrder.forEach(item => {
+                    itemCounts[item.id] = (itemCounts[item.id] || 0) + 1;
+                });
+
+                currentOrder.filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i).forEach(item => {
+                    const li = document.createElement('li');
+                    const count = itemCounts[item.id];
+                    const itemTotal = (item.price * count).toFixed(2);
+                    
+                    li.innerHTML = `
+                        <span>${count}x ${item.name} - ${itemTotal} €</span>
+                        <button class="remove-item" onclick="removeFromOrder(${item.id})">-</button>
+                    `;
+                    orderItemsList.appendChild(li);
+                });
+
+                total = currentOrder.reduce((sum, item) => sum + item.price, 0);
+                totalDisplay.textContent = `Gesamt: ${total.toFixed(2)} €`;
+            }
+
+            // Globale Funktion für removeFromOrder (wird von onclick aufgerufen)
+            window.removeFromOrder = removeFromOrder;
+
+            submitButton.addEventListener('click', () => {
+                if (!waiterName) {
+                    alert('Bitte geben Sie zuerst Ihren Namen ein!');
+                    return;
+                }
+                
+                const tableNumber = tableNumberInput.value;
+                if (!tableNumber) {
+                    alert('Bitte eine Tischnummer eingeben!');
+                    return;
+                }
+                if (currentOrder.length === 0) {
+                    alert('Keine Artikel in der Bestellung!');
+                    return;
+                }
+
+                const total = currentOrder.reduce((sum, item) => sum + item.price, 0);
+                const timestamp = new Date().toLocaleString('de-DE');
+
+                socket.emit('placeOrder', {
+                    table: tableNumber,
+                    items: currentOrder,
+                    total: total,
+                    waiter: waiterName,
+                    timestamp: timestamp
+                });
+
+                alert(`Bestellung für Tisch ${tableNumber} wurde abgeschickt!`);
+                currentOrder = [];
+                tableNumberInput.value = '';
+                updateOrderDisplay();
+            });
+        });
+    </script>
+</body>
+</html>
